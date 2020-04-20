@@ -200,9 +200,9 @@ var blocks = [
 
 ];
 
-
+let int;
 initialize();
-let int = setInterval(oneSpaceDown, 500);
+int = setInterval(oneSpaceDown, 500);
 
 function initialize() {
     initWrapFrame();
@@ -266,15 +266,17 @@ function initWrapFrame() {
 }
 
 function nextBlockGenerate() {
-    var coordinateInjectedBlock = coordinateInjection(nextTargetShape, targetBlock['color'], exitCoordinates['x'], exitCoordinates['y']);
+    var nextTargetShape1 = JSON.parse(JSON.stringify(nextTargetShape));
+    var coordinateInjectedBlock = coordinateInjection(nextTargetShape1, nextTargetBlock['color'], exitCoordinates['x'], exitCoordinates['y']);
 
     (coordinateInjectedBlock || []).forEach((col, i) => {
         col.forEach((row, j) => {
-            nextTargetShape[i].splice(row['y'], 1, { ...roomInject((row['value'] === 0) ? 'black' : row['color'], row['value']), ...{ control: true } });
+            //nextTargetShape[i].splice(row['y'], 1, { ...roomInject((row['value'] === 0) ? 'black' : row['color'], row['value']), ...{ control: true } });
+            nextTargetShape1[i].splice(row['y'], 1, { ...roomInject((row['value'] === 0) ? 'black' : row['color'], row['value']) });
         });
     });
 
-    nextDraw();
+    nextDraw(nextTargetShape1);
 }
 
 function blockGenerate() {
@@ -289,7 +291,7 @@ function blockGenerate() {
 
     (coordinateInjectedBlock || []).forEach((col, i) => {
         col.forEach((row, j) => {
-            tetris[i].splice(row['y'], 1, { ...roomInject((row['value'] === 0) ? 'black' : row['color'], row['value']), ...{ control: true } });
+            tetris[i].splice(row['y'], 1, { ...roomInject((row['value'] === 0) ? 'black' : row['color'], row['value']), ...(row['value'] === 0) ? {} : { control: true } });
         });
     });
 
@@ -327,7 +329,7 @@ function nextTetrisRemove() {
     }
 }
 
-function nextDraw() {
+function nextDraw(nextTargetShape) {
     nextTetrisRemove();
     let fragment = document.createDocumentFragment();
     nextTargetShape.forEach((col, i) => {
@@ -342,7 +344,7 @@ function nextDraw() {
         });
     });
 
-    console.log("??fragment", fragment)
+   // console.log("??fragment", fragment)
     nextTetrisDom.appendChild(fragment);
 }
 
@@ -361,12 +363,11 @@ function draw() {
         });
     });
 
-    console.log("??fragment", fragment)
+    //console.log("??fragment", fragment)
     tetrisDom.appendChild(fragment);
 }
 
 function oneSpaceDown() {
-    console.log(" oneSpaceDown ")
     var cloneTetris = JSON.parse(JSON.stringify(tetris));
     var reverseCloneTetris = cloneTetris.reverse();
 
@@ -374,20 +375,21 @@ function oneSpaceDown() {
     let i = 0;
     let reverseCloneTetrisColLen = reverseCloneTetris.length;
     for(; i < reverseCloneTetrisColLen ; i++) {
-        if(checkTheBottom(reverseCloneTetris[i]) && i === 0) {
+        if(checkTheBottom(reverseCloneTetris, reverseCloneTetris[i], i)) {
             console.log("밑바닥 확인");
 
             removeControllerInitData(reverseCloneTetris);
             tetris = reverseCloneTetris.reverse();
-            clearInterval(int);
+            //clearInterval(int);
             blockWarmUp();
-            break;
+            //int = setInterval(oneSpaceDown, 500);
+            return false;
         }
 
         let j = 0;
         let reverseCloneTetrisRowLen = reverseCloneTetris[i].length;
         for (; j < reverseCloneTetrisRowLen; j++) {
-            if (reverseCloneTetris[i][j]['control']) {
+            if (reverseCloneTetris[i][j]['control'] && reverseCloneTetris[i][j]['value']) {
                 if (i - 1 >= 0) {
                     reverseCloneTetris[i - 1].splice(j, 1, reverseCloneTetris[i][j]);
                     reverseCloneTetris[i].splice(j, 1, {...roomInject("black", 0)});
@@ -396,16 +398,19 @@ function oneSpaceDown() {
         }
     }
 
-    console.log("reverseCloneTetris", reverseCloneTetris)
+   //console.log("reverseCloneTetris", reverseCloneTetris)
     tetris = reverseCloneTetris.reverse();
-
     draw();
 }
 
-function checkTheBottom(checkArray) {
-    return (checkArray || []).some((data) => {
-        return data.value === 1
-    })
+function checkTheBottom(reverseCloneTetris, checkArray, index) {
+    //return (checkArray || []).some((col, i) => {
+       // return col.some((row, j) => {
+        return checkArray.some((row, j) => {
+            //return (row['control'] === true && row.value === 1 && i > 0 && checkArray[i - 1][j]['value'] === 1 && checkArray[i - 1][j]['control'] !== true) || (i === 0 && row['control'] === true && row.value === 1);
+            return (row['control'] === true && row.value === 1 && index > 0 && reverseCloneTetris[index - 1][j]['value'] === 1 && reverseCloneTetris[index - 1][j]['control'] !== true) || (index === 0 && row['control'] === true && row.value === 1);
+        });
+  //  })
 }
 
 function removeControllerInitData(reverseCloneTetris) {
@@ -418,4 +423,48 @@ function removeControllerInitData(reverseCloneTetris) {
 
 function roomInject(color, value) {
     return { color: color, value: value };
+}
+
+window.addEventListener("keydown", function(e) {
+
+    switch (e.code) {
+        case 'ArrowLeft': { // 왼쪽
+            console.log("ArrowLeft");
+            console.log("isMovable", isMovable('left'));
+            if(isMovable('left')) {
+                blockMove('left');
+
+
+
+            }
+
+
+
+            break;
+        }
+    }
+});
+
+function blockMove(direction) {
+    var cloneTetris = JSON.parse(JSON.stringify(tetris));
+    (cloneTetris || []).forEach((col, i) => {
+        col.forEach((row, j) => {
+            if(row['control'] === true) {
+                cloneTetris[i].splice(j - 1, 1, cloneTetris[i][j]);
+                cloneTetris[i].splice(j, 1, {...roomInject("black", 0)});
+            }
+        });
+
+    });
+    tetris = cloneTetris;
+    draw();
+}
+
+function isMovable(direction) {
+    console.log("tetris", tetris)
+    return (tetris || []).every((col, i) => {
+         return col.every((row, j) => {
+             return !(row['control'] === true && j === ((direction === 'left') ? 0 : 9));
+         });
+    });
 }
