@@ -13,6 +13,7 @@ var nextTetrisDom = document.querySelector("#next-table");
 var tetris = [];
 var targetBlock = {};
 var targetShape = [];
+var targetShapeNumber = 0;
 var nextTargetBlock = {};
 var nextTargetShape = [];
 var exitCoordinates = { x: 0, y: 3 };
@@ -212,7 +213,8 @@ function initialize() {
 
 function blockFactory() {
     var targetBlock = JSON.parse(JSON.stringify(blocks[Math.floor(Math.random() * blocks.length)]));
-    var targetShape = JSON.parse(JSON.stringify(targetBlock['shape'][Math.floor(Math.random() * targetBlock['shape'].length)]));
+    targetShapeNumber = Math.floor(Math.random() * targetBlock['shape'].length);
+    var targetShape = JSON.parse(JSON.stringify(targetBlock['shape'][targetShapeNumber]));
     return { targetBlock: targetBlock, targetShape: targetShape }
 }
 
@@ -261,8 +263,8 @@ function initWrapFrame() {
 
 
 
-    console.log("tetris", tetris)
-    console.log("tetrisDom", tetrisDom)
+   // console.log("tetris", tetris)
+   // console.log("tetrisDom", tetrisDom)
 }
 
 function nextBlockGenerate() {
@@ -284,22 +286,24 @@ function blockGenerate() {
 
    // targetBlock = blocks[2];
    // targetShape = targetBlock['shape'][0];
-    console.log("targetBlock", targetBlock)
-    console.log("targetShape", targetShape)
+   // console.log("blockGenerate > targetBlock", targetBlock)
+   // console.log("blockGenerate > targetShape", targetShape)
+
 
     var coordinateInjectedBlock = coordinateInjection(targetShape, targetBlock['color'], exitCoordinates['x'], exitCoordinates['y']);
-
+    console.log("blockGenerate > coordinateInjectedBlock", coordinateInjectedBlock);
     (coordinateInjectedBlock || []).forEach((col, i) => {
         col.forEach((row, j) => {
-            tetris[i].splice(row['y'], 1, { ...roomInject((row['value'] === 0) ? 'black' : row['color'], row['value']), ...(row['value'] === 0) ? {} : { control: true } });
+            // TODO control
+           // tetris[i].splice(row['y'], 1, { ...roomInject((row['value'] === 0) ? 'black' : row['color'], row['value']), ...(row['value'] === 0) ? {} : { control: true } });
+            tetris[i].splice(row['y'], 1, { ...roomInject((row['value'] === 0) ? 'black' : row['color'], row['value']), ...{ control: true } });
         });
     });
 
-    console.log("result targetShape >>> ", targetShape)
-    console.log("result tetris >>> ", tetris)
+   // console.log("result targetShape >>> ", targetShape)
+    console.log("result tetris >>> ", tetris);
 
     draw();
-
 }
 
 function coordinateInjection(shape, color, x, y) {
@@ -311,7 +315,7 @@ function coordinateInjection(shape, color, x, y) {
     });
 
 
-    console.log("coordinateInjectedBlock", coordinateInjectedBlock)
+    //console.log("coordinateInjectedBlock", coordinateInjectedBlock)
     return coordinateInjectedBlock;
 }
 
@@ -376,7 +380,7 @@ function oneSpaceDown() {
     let reverseCloneTetrisColLen = reverseCloneTetris.length;
     for(; i < reverseCloneTetrisColLen ; i++) {
         if(checkTheBottom(reverseCloneTetris, reverseCloneTetris[i], i)) {
-            console.log("밑바닥 확인");
+            console.log("===============밑바닥 확인===============");
 
             removeControllerInitData(reverseCloneTetris);
             tetris = reverseCloneTetris.reverse();
@@ -389,12 +393,20 @@ function oneSpaceDown() {
         let j = 0;
         let reverseCloneTetrisRowLen = reverseCloneTetris[i].length;
         for (; j < reverseCloneTetrisRowLen; j++) {
-            if (reverseCloneTetris[i][j]['control'] && reverseCloneTetris[i][j]['value']) {
+            if (reverseCloneTetris[i][j]['control']) {
                 if (i - 1 >= 0) {
-                    reverseCloneTetris[i - 1].splice(j, 1, reverseCloneTetris[i][j]);
-                    reverseCloneTetris[i].splice(j, 1, {...roomInject("black", 0)});
+                    if(reverseCloneTetris[i - 1][j]['value'] === 0) {
+                        reverseCloneTetris[i - 1].splice(j, 1, reverseCloneTetris[i][j]);
+                    } else {
+
+                    }
+
+                   // reverseCloneTetris[i].splice(j, 1, {...roomInject("black", 0)});
+                    reverseCloneTetris[i].splice(j, 1, {...roomInject("black", 0) });
                 }
-            }
+            } /*else {
+                reverseCloneTetris[i].splice(j, 1, {...roomInject("black", 0) });
+            }*/
         }
     }
 
@@ -433,28 +445,105 @@ window.addEventListener("keydown", function(e) {
             console.log("isMovable", isMovable('left'));
             if(isMovable('left')) {
                 blockMove('left');
-
-
-
             }
+            break;
+        }
 
-
-
+        case 'ArrowRight': { // 오른쪽
+            console.log("ArrowRight");
+            console.log("isMovable", isMovable('right'));
+            if(isMovable('right')) {
+                blockMove('right');
+            }
             break;
         }
     }
 });
 
+window.addEventListener('keyup', (e) => {
+    switch (e.code) {
+        case 'ArrowUp': { // 방향 전환
+            console.log("ArrowUp");
+            blockChangeDirection();
+
+        }
+    }
+});
+
+function getTargetBlockCoordinates(cloneTetris) {
+
+    var coordinates = {};
+
+    let i = 0;
+    let cloneTetrisColLen = cloneTetris.length;
+    for(; i < cloneTetrisColLen ; i++) {
+        let j = 0;
+        let cloneTetrisColLenRowLen = cloneTetris[i].length;
+        for (; j < cloneTetrisColLenRowLen; j++) {
+            if(cloneTetris[i][j]['control']) {
+                return coordinates = { x: i, y: j };
+            }
+        }
+    }
+}
+
+// 블럭 방향 전환
+function blockChangeDirection() {
+    console.log("targetBlock", targetBlock);
+    console.log("targetShape", targetShape);
+    console.log("targetShapeNumber", targetShapeNumber);
+
+    targetShapeNumber = (targetBlock.shape.length - 1 <= targetShapeNumber) ? 0 : targetShapeNumber + 1;
+    targetShape = targetBlock['shape'][targetShapeNumber];
+    console.log("targetShape1", targetShape);
+
+   // var cloneTetris = JSON.parse(JSON.stringify(tetris));
+    var coordinates = getTargetBlockCoordinates(tetris);
+
+    //var reverseCloneTetris = cloneTetris.reverse();
+    var coordinateInjectedBlock = coordinateInjection(targetShape, targetBlock['color'], coordinates['x'], coordinates['y']);
+    (tetris || []).forEach((col, i) => {
+        col.forEach((row, j) => {
+            if(tetris[i][j]['value'] !== 1 || tetris[i][j]['control'] === true) tetris[i][j] = { ...roomInject('black', 0) };
+        });
+    });
+
+    (coordinateInjectedBlock || []).forEach((col, i) => {
+        col.forEach((row, j) => {
+            tetris[row['x']].splice(row['y'], 1, { ...roomInject((row['value'] === 0) ? 'black' : row['color'], row['value']), ...{ control: true } });
+        });
+    });
+
+
+
+    console.log("coordinateInjectedBlock", coordinateInjectedBlock);
+
+
+    //var selectedBlock = (blocks || []).find(data => data['code'] === targetBlock['code']);
+
+   // console.log("selectedBlock", selectedBlock);
+
+
+  //  tetris = cloneTetris;
+    draw();
+}
+
+// 블럭 좌우 이동
 function blockMove(direction) {
     var cloneTetris = JSON.parse(JSON.stringify(tetris));
     (cloneTetris || []).forEach((col, i) => {
+        if(direction === 'right') {
+            col.reverse();
+        }
         col.forEach((row, j) => {
             if(row['control'] === true) {
                 cloneTetris[i].splice(j - 1, 1, cloneTetris[i][j]);
                 cloneTetris[i].splice(j, 1, {...roomInject("black", 0)});
             }
         });
-
+        if(direction === 'right') {
+            col.reverse();
+        }
     });
     tetris = cloneTetris;
     draw();
